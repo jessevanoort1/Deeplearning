@@ -25,7 +25,7 @@ import numpy as np
 import os
 import h5py
 import re
-tf.enable_eager_execution()
+
 
 #Defining generator that yields paths for random images + label data
 def gen(datasettype):
@@ -41,68 +41,65 @@ def gen(datasettype):
       #elif datasettype == 'test':
           #path = 
           #path2 =  
-       #images_path=glob.glob(path)
-       #images_path = sorted(images_path, key=lambda x:float(re.findall("(\d+)",x)[0]))
-       images_path = sorted(glob.glob(path))
-       #base = os.path.basename(images_path) 
-       #print(base)
-       #one, two = os.path.splitext(base)
-       images_path=[x.encode('utf-8') for x in images_path] 
-       #print(one)
-       #labels_path=glob.glob(label)
-       labels_path = sorted(glob.glob(label))
-       #labels_path = sorted(labels_path, key=lambda x:float(re.findall("(\d+)",x)[0]))
-       labels_path=[x.encode('utf-8') for x in labels_path]
-       images_and_labels = zip(images_path,labels_path)
-       for paths in images_and_labels:
-           yield paths
-
    elif dataset_used == 'LIP':
-       if datasettype == 'train':
-           path = '/home/jesse/HumanSegmentation/LIP/TrainVal_images/TrainVal_images/train_images/*'
-       elif datasettype == 'validation':
-           path = '/home/jesse/HumanSegmentation/LIP/TrainVal_images/TrainVal_images/val_images/*'
-       #elif datasettype == 'test':
-           #path = 
-           #path2 =
-       images_path=glob.glob(path)  
-       for path in images_path:
-           base = os.path.basename(path) 
-           one, two = os.path.splitext(base)
-           if datasettype == 'train':
-               label = '/home/jesse/HumanSegmentation/LIP/TrainVal_parsing_annotations/TrainVal_parsing_annotations/train_segmentations_gray/'+one+'.png'
-           elif datasettype == 'validation':
-               label = '/home/jesse/HumanSegmentation/LIP/TrainVal_parsing_annotations/TrainVal_parsing_annotations/val_segmentations_gray/'+one+'.png'
-       images_path=[x.encode('utf-8') for x in images_path]
-       labels_path=glob.glob(label)
-       labels_path=[x.encode('utf-8') for x in labels_path]
-       images_and_labels = zip(images_path,labels_path)
-       for paths in images_and_labels:
-           yield paths 
-  #labels_path=glob.glob(path2)
-  #labels_path=[x.encode('utf-8') for x in labels_path]
-  #couples=zip(images_path,labels_path)
-  #for paths in couples:
-  #    print(paths)
-  #    yield paths   
+      if datasettype == 'train':
+          path = '/home/jesse/HumanSegmentation/LIP/TrainVal_images/TrainVal_images/train_images/*'
+          label = '/home/jesse/HumanSegmentation/LIP/TrainVal_parsing_annotations/TrainVal_parsing_annotations/train_segmentations_gray/*'
+      elif datasettype == 'validation':
+          path = '/home/jesse/HumanSegmentation/LIP/TrainVal_images/TrainVal_images/val_images/*'
+          label = '/home/jesse/HumanSegmentation/LIP/TrainVal_parsing_annotations/TrainVal_parsing_annotations/val_segmentations_gray/*'
+     #elif datasettype == 'test':
+         #path = 
+         #path2 =  
+          
+      #images_path=glob.glob(path)
+      #images_path = sorted(images_path, key=lambda x:float(re.findall("(\d+)",x)[0]))
+      images_path = sorted(glob.glob(path))
+      #base = os.path.basename(images_path) 
+      #print(base)
+      #one, two = os.path.splitext(base)
+      images_path=[x.encode('utf-8') for x in images_path] 
+      #print(one)
+      #labels_path=glob.glob(label)
+      labels_path = sorted(glob.glob(label))
+      #labels_path = sorted(labels_path, key=lambda x:float(re.findall("(\d+)",x)[0]))
+      labels_path=[x.encode('utf-8') for x in labels_path]
+      images_and_labels = zip(images_path,labels_path)
+      for paths in images_and_labels:
+          print(paths)
+          yield paths
 
 def read_image_and_label(image_path,label_path):
   #the mapping function, first the paths will be read and the images saved as tensors. Then the tensors will be normalized in [0,1]
-  image_tensor=tf.image.decode_image(tf.io.read_file(image_path))
-  image_tensor=tf.math.divide(image_tensor,255) #normalize
+  #image_tensor=tf.image.decode_image(tf.io.read_file(image_path))
+  image_tensor = tf.io.decode_image(
+    contents = tf.io.read_file(image_path), channels=3, dtype=tf.dtypes.uint8, name=None,
+    expand_animations=False
+)
+  label_tensor = tf.io.decode_image(
+    contents = tf.io.read_file(label_path), channels=None, dtype=tf.dtypes.uint8, name=None,
+    expand_animations=False
+)
   image_tensor = tf.cast(image_tensor, tf.float32)
+  image_tensor=tf.math.divide(image_tensor,255) #normalize
   #Resizing images for faster training
   #image_tensor=tf.image.resize_image_with_crop_or_pad(image_tensor,400,500)
-  image_tensor=tf.expand_dims(image_tensor,axis=0)
-  image_tensor=tf.image.resize_bilinear(image_tensor,(250,250))
-  image_tensor=tf.squeeze(image_tensor,axis=0)
-  label_tensor=tf.image.decode_image(tf.io.read_file(label_path))
+  #image_tensor=tf.expand_dims(image_tensor,axis=0)
+  #image_tensor = image_tensor[tf.newaxis, ...]
+  #image_tensor.shape.as_list()
+  print(image_tensor)
+  print(label_tensor)
+  image_tensor=tf.image.resize(image_tensor,size=(256,256))
+  #image_tensor=tf.image.resize_bilinear(image_tensor,(250,250))
+  #image_tensor=tf.squeeze(image_tensor,axis=0)
+  #label_tensor=tf.image.decode_image(tf.io.read_file(label_path))
   #label_tensor=tf.math.divide(image_tensor,255) #normalize
   #label_tensor=tf.image.resize_image_with_crop_or_pad(label_tensor,400,500)
-  label_tensor=tf.expand_dims(label_tensor,axis=0)
-  label_tensor=tf.image.resize_bilinear(label_tensor,(250,250))
-  label_tensor=tf.squeeze(label_tensor,axis=0)
-  label_tensor = tf.cast(label_tensor, tf.int32)
+  #label_tensor=tf.expand_dims(label_tensor,axis=0)
+  #label_tensor=tf.image.resize_bilinear(label_tensor,(250,250))
+  label_tensor=tf.image.resize(images = label_tensor,size=(256,256))
+  #label_tensor=tf.squeeze(label_tensor,axis=0)
+  label_tensor = tf.cast(label_tensor, tf.float32)
   #Setting unnecessary classes from cityscapes to 0, to reduce total classes to 20
   #label_tensor =tf.gather(new_cids, label_tensor)
   return image_tensor,label_tensor
@@ -253,9 +250,10 @@ def TheModel(batch_size_,restore):
 
   # Segmentation models losses can be combined together by '+' and scaled by integer or float factor
   # set class weights for dice_loss (car: 1.; pedestrian: 2.; background: 0.5;)
-  dice_loss = sm.losses.DiceLoss(class_weights=np.array([0.3, 1, 1, 1, 1, 1, 1])) 
-  focal_loss = sm.losses.CategoricalFocalLoss()
-  total_loss = dice_loss + (1 * focal_loss)
+  #dice_loss = sm.losses.DiceLoss(class_weights=np.array([0.3, 1, 1, 1, 1, 1, 1])) 
+  #focal_loss = sm.losses.CategoricalFocalLoss()
+  #total_loss = dice_loss + focal_loss
+  total_loss = sm.losses.categorical_focal_dice_loss 
 
   # actulally total_loss can be imported directly from library, above example just show you how to manipulate with losses
   # total_loss = sm.losses.binary_focal_dice_loss # or sm.losses.categorical_focal_dice_loss 
@@ -344,8 +342,8 @@ def test_model(batch_size_,restore):
   #test if the output is what is expected; prints model generated images of the last batch
   dataset=input_fn(batch_size_,datasettype = 'train')
   #datasetval = input_fn(batch_size_,datasettype = 'validation')
-  #model=TheModel(batch_size_,restore)
-  model = tf.contrib.saved_model.load_keras_model('./saved_models/saved_model_test7bigsparse')
+  model=TheModel(batch_size_,restore)
+  model.load_weights('best_model.h5')
   it=dataset.make_one_shot_iterator()
   mean_iou_cat=0
   iou_cat = 0
@@ -409,5 +407,5 @@ if __name__=='__main__':
   restore = False 
   batch_size_ = 1
   #test_data(batch_size_,datasettype = 'train')
-  #TheModel(batch_size_,restore)
-  test_model(batch_size_,restore)
+  TheModel(batch_size_,restore)
+  #test_model(batch_size_,restore)
